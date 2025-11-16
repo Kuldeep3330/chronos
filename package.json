@@ -1,0 +1,26 @@
+{
+  "name": "chronos",
+  "version": "1.0.0",
+  "description": "an event scheduler app",
+  "main": "index.js",
+  "scripts": {
+    "dev":"node index.js",
+    
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kuldeep3330/chronos.git"
+  },
+  "keywords": [
+    "Backend",
+    "MERN",
+    "APP"
+  ],
+  "author": "Kuldeep Kumar",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kuldeep3330/chronos/issues"
+  },
+  "homepage": "https://github.com/Kuldeep3330/chronos#readme"
+}
