@@ -6,13 +6,16 @@ const jobsRouter = require('./routes/jobs');
 const systemRouter = require('./routes/system');
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
 app.use('/jobs', jobsRouter);
 app.use('/system', systemRouter);
 
-mongoose.connect(config.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+// ✅ Modern Mongoose connection (NO deprecated options)
+mongoose
+  .connect(config.MONGO_URI)
   .then(() => console.log('Mongo connected'))
   .catch(err => console.error('Mongo error', err));
 

@@ -2,32 +2,52 @@ const express = require('express');
 const Job = require('../models/Job');
 const Log = require('../models/Log');
 const { queue } = require('../queue/queue');
-const config = require('../config');
 const { nextRunFromCron } = require('../utils/cronNext');
 
 const router = express.Router();
+const JOB_NAME = 'execute-job';
 
-// Create job
+/**
+ * Create job
+ */
 router.post('/', async (req, res) => {
-  const body = req.body;
   try {
-    const job = new Job(body);
-    if (job.cron) job.nextRunAt = nextRunFromCron(job.cron);
+    const job = new Job(req.body);
+
+    if (job.cron) {
+      job.nextRunAt = nextRunFromCron(job.cron);
+    }
+
     await job.save();
 
-    // enqueue into Bull for scheduling
+    const jobOptions = {
+      jobId: job._id.toString(),
+      removeOnComplete: true,
+      removeOnFail: false,
+      attempts: job.maxAttempts,
+    };
+
     if (job.cron) {
-      await queue.add(job._id.toString(), { jobId: job._id }, {
-        repeat: { cron: job.cron },
-        removeOnComplete: true,
-        attempts: job.maxAttempts
-      });
+      await queue.add(
+        JOB_NAME,
+        { jobId: job._id.toString() },
+        {
+          ...jobOptions,
+          repeat: { cron: job.cron },
+        }
+      );
     } else if (job.delayUntil) {
-      const delay = new Date(job.delayUntil).getTime() - Date.now();
-      await queue.add(job._id.toString(), { jobId: job._id }, { delay: Math.max(0, delay), removeOnComplete: true });
+      const delay = Math.max(
+        0,
+        new Date(job.delayUntil).getTime() - Date.now()
+      );
+
+      await queue.add(JOB_NAME, { jobId: job._id.toString() }, {
+        ...jobOptions,
+        delay,
+      });
     } else {
-      // immediate
-      await queue.add(job._id.toString(), { jobId: job._id }, { removeOnComplete: true });
+      await queue.add(JOB_NAME, { jobId: job._id.toString() }, jobOptions);
     }
 
     res.status(201).json(job);
@@ -37,59 +57,106 @@ router.post('/', async (req, res) => {
   }
 });
 
-// List jobs with filters
+/**
+ * List jobs (hide cancelled by default)
+ */
 router.get('/', async (req, res) => {
   const { status, limit = 50, skip = 0 } = req.query;
-  const q = {};
-  if (status) q.status = status;
-  const jobs = await Job.find(q).sort({ createdAt: -1 }).skip(parseInt(skip)).limit(parseInt(limit));
+
+  const query = status
+    ? { status }
+    : { status: { $ne: 'cancelled' } };
+
+  const jobs = await Job.find(query)
+    .sort({ createdAt: -1 })
+    .skip(Number(skip))
+    .limit(Number(limit));
+
   res.json(jobs);
 });
 
-// Get job
+/**
+ * Get job
+ */
 router.get('/:id', async (req, res) => {
   const job = await Job.findById(req.params.id);
   if (!job) return res.status(404).json({ error: 'Not found' });
   res.json(job);
 });
 
-// Update job (reschedule)
+/**
+ * Update job metadata (does not reschedule)
+ */
 router.put('/:id', async (req, res) => {
-  const updates = req.body;
   const job = await Job.findById(req.params.id);
   if (!job) return res.status(404).json({ error: 'Not found' });
 
-  Object.assign(job, updates);
-  if (job.cron) job.nextRunAt = nextRunFromCron(job.cron);
+  Object.assign(job, req.body);
+
+  if (job.cron) {
+    job.nextRunAt = nextRunFromCron(job.cron);
+  }
+
   await job.save();
-  // Note: not updating existing repeat job in Bull here for simplicity.
   res.json(job);
 });
 
-// Delete / cancel
+/**
+ * Cancel job (soft delete)
+ */
 router.delete('/:id', async (req, res) => {
   const job = await Job.findById(req.params.id);
   if (!job) return res.status(404).json({ error: 'Not found' });
+
   job.status = 'cancelled';
   await job.save();
-  // we could also remove from queue by name
+
+  // Remove waiting / delayed job
   await queue.remove(job._id.toString());
+
+  // Remove repeatable job
+  if (job.cron) {
+    const repeatables = await queue.getRepeatableJobs();
+    const repeat = repeatables.find(r => r.id === job._id.toString());
+    if (repeat) {
+      await queue.removeRepeatableByKey(repeat.key);
+    }
+  }
+
   res.json({ ok: true });
 });
 
-// Retry a job manually
+/**
+ * Retry job manually
+ */
 router.post('/:id/retry', async (req, res) => {
   const job = await Job.findById(req.params.id);
   if (!job) return res.status(404).json({ error: 'Not found' });
+
   job.status = 'scheduled';
   await job.save();
-  await queue.add(job._id.toString(), { jobId: job._id });
+
+  await queue.add(
+    JOB_NAME,
+    { jobId: job._id.toString() },
+    {
+      jobId: job._id.toString(),
+      removeOnComplete: true,
+      attempts: job.maxAttempts,
+    }
+  );
+
   res.json({ ok: true });
 });
 
-// Get logs
+/**
+ * Job logs
+ */
 router.get('/:id/logs', async (req, res) => {
-  const logs = await Log.find({ jobId: req.params.id }).sort({ runAt: -1 }).limit(200);
+  const logs = await Log.find({ jobId: req.params.id })
+    .sort({ runAt: -1 })
+    .limit(200);
+
   res.json(logs);
 });
 

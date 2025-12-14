@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/Kuldeep3330/chronos#readme",
   "dependencies": {
-    "bullmq": "^5.65.1",
+    "bullmq": "^5.66.0",
     "cors": "^2.8.5",
     "cron-parser": "^5.4.0",
     "express": "^5.2.1",
