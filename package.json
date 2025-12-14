@@ -4,8 +4,7 @@
   "description": "an event scheduler app",
   "main": "index.js",
   "scripts": {
-    "dev":"node index.js",
-    
+    "dev": "nodemon src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,5 +21,14 @@
   "bugs": {
     "url": "https://github.com/Kuldeep3330/chronos/issues"
   },
-  "homepage": "https://github.com/Kuldeep3330/chronos#readme"
+  "homepage": "https://github.com/Kuldeep3330/chronos#readme",
+  "dependencies": {
+    "bullmq": "^5.65.1",
+    "cors": "^2.8.5",
+    "cron-parser": "^5.4.0",
+    "express": "^5.2.1",
+    "ioredis": "^5.8.2",
+    "mongoose": "^9.0.0",
+    "nodemon": "^3.1.11"
+  }
 }
