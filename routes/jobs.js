@@ -130,7 +130,7 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid job id' });
   }
 
-  // Prevent rescheduling via update
+  // Prevent rescheduling (update)
   if ('cron' in req.body || 'delayUntil' in req.body) {
     return res.status(400).json({
       error: 'Rescheduling is not supported via update endpoint',
@@ -147,7 +147,7 @@ router.put('/:id', async (req, res) => {
 });
 
 /**
- * Cancel job (soft delete)
+ * Cancel job (delete)
  */
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
