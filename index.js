@@ -13,7 +13,7 @@ app.use(express.json());
 app.use('/jobs', jobsRouter);
 app.use('/system', systemRouter);
 
-// ✅ Modern Mongoose connection (NO deprecated options)
+
 mongoose
   .connect(config.MONGO_URI)
   .then(() => console.log('Mongo connected'))
