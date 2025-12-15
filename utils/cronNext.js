@@ -1,9 +1,11 @@
-const parser = require('cron-parser');
+const { CronExpressionParser } = require('cron-parser');
 
 function nextRunFromCron(cronExpr) {
   try {
-    const it = parser.parseExpression(cronExpr, { utc: true });
-    return it.next().toDate();
+    const interval = CronExpressionParser.parse(cronExpr, {
+      tz: 'UTC'
+    });
+    return interval.next().toDate();
   } catch (e) {
     return null;
   }

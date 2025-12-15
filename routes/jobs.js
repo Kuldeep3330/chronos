@@ -178,7 +178,7 @@ router.delete('/:id', async (req, res) => {
     }
   }
 
-  res.json({ ok: true });
+  res.json({message: "Job cancelled successfully", ok: true });
 });
 
 /**
@@ -208,7 +208,7 @@ router.post('/:id/retry', async (req, res) => {
     }
   );
 
-  res.json({ ok: true });
+  res.json({ message: "Job retried successfully" , ok: true });
 });
 
 /**
