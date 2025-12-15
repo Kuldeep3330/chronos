@@ -8,7 +8,7 @@ router.get('/health', async (req, res) => {
 
   let redisOk = false;
   try {
-    if (redis.status === 'ready') {
+    if (redis) {
       await redis.ping();
       redisOk = true;
     }
@@ -16,8 +16,10 @@ router.get('/health', async (req, res) => {
     redisOk = false;
   }
 
-  res.json({
-    status: dbOk && redisOk ? 'ok' : 'degraded',
+  const status = dbOk && redisOk ? 'ok' : 'degraded';
+
+  res.status(status === 'ok' ? 200 : 503).json({
+    status,
     db: dbOk,
     redis: redisOk,
     time: new Date().toISOString(),
